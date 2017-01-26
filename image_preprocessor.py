@@ -1,6 +1,7 @@
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
+from image_effect import ImageEffect
 
 class ImagePreprocessor():
 
@@ -8,25 +9,25 @@ class ImagePreprocessor():
     SCALE_FACTOR  = 3.5
     TRAINING_FILE = '../data/traffic-signs-data/train.p'
 
-    def call():
+    def call(self):
         plt.interactive(False)
 
-        train_data = load_data()
+        train_data = self.load_data()
 
         X_train, y_train = train_data['features'], train_data['labels']
 
         extended_data, extended_labels = augment_data(
-                X_train,
-                y_train,
-                scale=SCALE_FACTOR
+            X_train,
+            y_train,
+            scale=self.SCALE_FACTOR
         )
 
-        new_train_data = train_data = {
-                'features': extended_data,
-                'labels': extended_labels
+        new_train_data = {
+            'features': extended_data,
+            'labels': extended_labels
         }
 
-        save_data(new_train_data, OUTPUT_FILE)
+        self.save_data(new_train_data, self.OUTPUT_FILE)
 
     def plot_samples():
         item, count = np.unique(y_train, return_counts=True)
@@ -56,6 +57,7 @@ class ImagePreprocessor():
         ts, imgs_per_sign   = np.unique(y_train, return_counts=True)
 
         avg_per_sign        = np.ceil(np.mean(imgs_per_sign)).astype('uint32')
+        image_effect        = ImageEffect()
 
         separated_data      = []
 
@@ -74,7 +76,7 @@ class ImagePreprocessor():
 
             for img in sign_images:
                 for _ in range(scale_factor):
-                    new_images.append(image_random_transform(img))
+                    new_images.append(image_effect.random_effect(img))
 
             if len(new_images) > 0:
                 sign_images = np.concatenate((sign_images, new_images), axis=0)
@@ -98,68 +100,7 @@ class ImagePreprocessor():
         with open(path, 'wb') as f:
             pickle.dump(file, f)
 
-    def image_random_transform(img):
-        a = np.random.randint(0, 2, [1, 5]).astype('bool')[0]
-        if a[0] == 1:
-            img = image_translate(img)
-        if a[1] == 1:
-            img = image_rotate(img)
-        if a[2] == 1:
-            img = image_shear(img)
-        if a[3] == 1:
-            img = image_blur(img)
-        if a[4] == 1:
-            img = image_gamma(img)
-        return img
 
 
-    def image_translate(img):
-        x = img.shape[0]
-        y = img.shape[1]
-
-        x_shift = np.random.uniform(-0.3 * x, 0.3 * x)
-        y_shift = np.random.uniform(-0.3 * y, 0.3 * y)
-
-        shift_matrix = np.float32([[1, 0, x_shift], [0, 1, y_shift]])
-        shift_img = cv2.warpAffine(img, shift_matrix, (x, y))
-
-        return shift_img
-
-
-    def image_rotate(img):
-        row, col, channel = img.shape
-
-        angle = np.random.uniform(-60, 60)
-        rotation_point = (row / 2, col / 2)
-        rotation_matrix = cv2.getRotationMatrix2D(rotation_point, angle, 1)
-
-        rotated_img = cv2.warpAffine(img, rotation_matrix, (col, row))
-        return rotated_img
-
-
-    def image_shear(img):
-        x, y, channel = img.shape
-
-        shear = np.random.randint(5,15)
-        pts1 = np.array([[5, 5], [20, 5], [5, 20]]).astype('float32')
-        pt1 = 5 + shear * np.random.uniform() - shear / 2
-        pt2 = 20 + shear * np.random.uniform() - shear / 2
-        pts2 = np.float32([[pt1, 5], [pt2, pt1], [5, pt2]])
-
-        M = cv2.getAffineTransform(pts1, pts2)
-        result = cv2.warpAffine(img, M, (y, x))
-        return result
-
-
-    def image_blur(img):
-        r_int = np.random.randint(0, 2)
-        odd_size = 2 * r_int + 1
-        return cv2.GaussianBlur(img, (odd_size, odd_size), 0)
-
-
-    def image_gamma(img):
-        gamma = np.random.uniform(0.3, 1.5)
-        invGamma = 1.0 / gamma
-        table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
-        new_img = cv2.LUT(img, table)
-        return new_img
+a = ImagePreprocessor()
+a.call()
