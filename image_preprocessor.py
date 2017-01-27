@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 from image_effect import ImageEffect
+import os.path
 
 class ImagePreprocessor():
 
@@ -106,8 +107,14 @@ class ImagePreprocessor():
         return True
 
     def load_data(self, train_path=TRAINING_FILE):
+        bytes_in = bytearray(0)
+        input_size = os.path.getsize(train_path)
+        max_bytes = 2**31 - 1
+
         with open(train_path, mode='rb') as f:
-            train = pickle.load(f)
+            for _ in range(0, input_size, max_bytes):
+                bytes_in += f.read(max_bytes)
+        train = pickle.loads(bytes_in)
 
         return train
 
