@@ -21,7 +21,7 @@ class ImagePreprocessor():
 
     def call(self):
 
-        extended_data, extended_labels = self.augment_data(
+        self.extended_data, self.extended_labels = self.augment_data(
             self.X_train,
             self.y_train,
             scale=self.SCALE_FACTOR
@@ -34,21 +34,21 @@ class ImagePreprocessor():
 
         self.save_data()
 
-    def plot_samples():
-        item, count = np.unique(y_train, return_counts=True)
+    def plot_samples(self):
+        item, count = np.unique(self.y_train, return_counts=True)
         freq = np.array((item, count)).T
 
-        item2, count2 = np.unique(extended_labels, return_counts=True)
+        item2, count2 = np.unique(self.extended_labels, return_counts=True)
         freq2 = np.array((item2, count2)).T
 
 
-        print('Before Data Preprocessing: %d samples' % (y_train.shape[0]))
+        print('Before Data Preprocessing: %d samples' % (self.y_train.shape[0]))
 
         plt.figure(1)
         plt.bar(item, count, alpha=0.2)
         plt.title('Before Data Preprocessing: Unequally Distributed Data')
 
-        print('After Data Preprocessing: %d samples' % (extended_labels.shape[0]))
+        print('After Data Preprocessing: %d samples' % (self.extended_labels.shape[0]))
 
         plt.figure(2)
         plt.bar(item2, count2, alpha=0.2)
