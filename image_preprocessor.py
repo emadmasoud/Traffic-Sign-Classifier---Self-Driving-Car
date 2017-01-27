@@ -29,8 +29,8 @@ class ImagePreprocessor():
         )
 
         self.new_train_data = {
-            'features': extended_data,
-            'labels': extended_labels
+            'features': self.extended_data,
+            'labels': self.extended_labels
         }
 
         self.save_data()
