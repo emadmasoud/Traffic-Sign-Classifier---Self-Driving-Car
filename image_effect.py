@@ -7,15 +7,15 @@ class ImageEffect:
         a = np.random.randint(0, 2, [1, 5]).astype('bool')[0]
 
         if a[0] == True:
-            img = image_translate(img)
+            img = self.image_translate(img)
         if a[1] == True:
-            img = image_rotate(img)
+            img = self.image_rotate(img)
         if a[2] == True:
-            img = image_shear(img)
+            img = self.image_shear(img)
         if a[3] == True:
-            img = image_blur(img)
+            img = self.image_blur(img)
         if a[4] == True:
-            img = image_gamma(img)
+            img = self.image_gamma(img)
         return img
 
 

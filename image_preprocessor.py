@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
@@ -9,29 +10,34 @@ class ImagePreprocessor():
     SCALE_FACTOR  = 3.5
     TRAINING_FILE = '../data/traffic-signs-data/train.p'
 
-    def call(self):
+    def __init__(self):
         plt.interactive(False)
 
-        train_data = self.load_data()
+        self.train_data = self.load_data()
+        self.image_effect = ImageEffect()
 
-        X_train, y_train = train_data['features'], train_data['labels']
+        self.X_train = self.train_data['features']
+        self.y_train = self.train_data['labels']
 
-        extended_data, extended_labels = augment_data(
-            X_train,
-            y_train,
+    def call(self):
+
+        extended_data, extended_labels = self.augment_data(
+            self.X_train,
+            self.y_train,
             scale=self.SCALE_FACTOR
         )
 
-        new_train_data = {
+        self.new_train_data = {
             'features': extended_data,
             'labels': extended_labels
         }
 
-        self.save_data(new_train_data, self.OUTPUT_FILE)
+        self.save_data()
 
     def plot_samples():
         item, count = np.unique(y_train, return_counts=True)
         freq = np.array((item, count)).T
+
         item2, count2 = np.unique(extended_labels, return_counts=True)
         freq2 = np.array((item2, count2)).T
 
@@ -51,13 +57,12 @@ class ImagePreprocessor():
         plt.show()
 
 
-    def augment_data(X_train, y_train, scale=2):
+    def augment_data(self, X_train, y_train, scale=2):
         total_traffic_signs = len(set(y_train))
 
         ts, imgs_per_sign   = np.unique(y_train, return_counts=True)
 
         avg_per_sign        = np.ceil(np.mean(imgs_per_sign)).astype('uint32')
-        image_effect        = ImageEffect()
 
         separated_data      = []
 
@@ -76,7 +81,7 @@ class ImagePreprocessor():
 
             for img in sign_images:
                 for _ in range(scale_factor):
-                    new_images.append(image_effect.random_effect(img))
+                    new_images.append(self.image_effect.random_effect(img))
 
             if len(new_images) > 0:
                 sign_images = np.concatenate((sign_images, new_images), axis=0)
@@ -89,18 +94,23 @@ class ImagePreprocessor():
         return expanded_data[1:], expanded_labels[1:]
 
 
+    def save_data(self, output_path=OUTPUT_FILE):
+        bytes_out = pickle.dumps(self.new_train_data)
+        max_bytes = 2**31 - 1
+        n_bytes   = sys.getsizeof(bytes_out)
 
-    def load_data(train_path=TRAINING_FILE):
+        with open(output_path, 'wb') as f:
+            for idx in range(0, n_bytes, max_bytes):
+                f.write(bytes_out[idx:idx+max_bytes])
+
+        return True
+
+    def load_data(self, train_path=TRAINING_FILE):
         with open(train_path, mode='rb') as f:
             train = pickle.load(f)
 
         return train
 
-    def save_data(file, path):
-        with open(path, 'wb') as f:
-            pickle.dump(file, f)
 
 
 
-a = ImagePreprocessor()
-a.call()
