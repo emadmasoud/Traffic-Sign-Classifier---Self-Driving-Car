@@ -19,8 +19,9 @@ class TrafficSignClassifierNet(object):
         self.mu            = 0
         self.sigma         = 0.1
         self.acc_threshold = 0.991
-        self.epochs        = 50
+        self.epochs        = 25
         self.save_loc      = "model-convnet-tsc.chkpt"
+        self.sess          = tf.Session()
 
         self.build_convnet()
 
@@ -90,20 +91,32 @@ class TrafficSignClassifierNet(object):
         fc3_b       = tf.Variable(tf.zeros(43))
         self.logits = tf.matmul(fc2, fc3_W) + fc3_b
 
-    def accuracy_score(self, X_test, y_test, file_path=self.save_loc):
-        sess   = tf.Session()
+    def accuracy_score(self, X_test, y_test, file_path):
+        # self.sess.run(tf.global_variables_initializer())
+        # tf.train.Saver().restore(sess, "model-convnet-tsc.chkpt.meta")
 
         loader = tf.train.import_meta_graph(file_path)
-        loader.restore(sess, tf.train.latest_checkpoint('./'))
+        loader.restore(self.sess, tf.train.latest_checkpoint('./'))
+
+        one_hot_y     = tf.one_hot(self.labels, len(set(y_test)))
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(self.logits, one_hot_y)
+        loss          = tf.reduce_mean(cross_entropy)
+        optimizer     = tf.train.AdamOptimizer(self.learning_rate).minimize(loss)
+
+        correct_prediction = tf.equal(tf.argmax(self.logits, 1), tf.argmax(one_hot_y, 1))
+        accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         test_accuracy = []
-        test_iter = int(len(X_test)/batch_size)
+        test_iter = int(len(X_test)/self.batch_size)
 
-        for i in range(testiter):
+        for i in range(test_iter):
             X_test_batch = X_test[i*self.batch_size:(i+1)*self.batch_size]
             y_test_batch = y_test[i*self.batch_size:(i+1)*self.batch_size]
             test_accuracy = sess.run(accuracy_operation, feed_dict={
-                self.features:X_test_batch, self.labels: y_test_batch, self.kb: 1})
+                self.features: X_test_batch,
+                self.labels: y_test_batch,
+                self.kp: 1.0,
+                self.learning_rate: self.learn_rate})
 
         print("testing accuracy: {:0.3f}".format(test_accuracy))
 
@@ -113,12 +126,7 @@ class TrafficSignClassifierNet(object):
             x_train, y_train, train_size=0.8, test_size=0.20, random_state=42
         )
 
-        X = self.features
-        y = self.labels
-        learning_rate = tf.placeholder(tf.float32)
-        keep_prob = self.kp
-
-        one_hot_y = tf.one_hot(y, len(set(y_train)))
+        one_hot_y = tf.one_hot(self.labels, len(set(y_train)))
 
         cross_entropy = tf.nn.softmax_cross_entropy_with_logits(self.logits, one_hot_y)
 
@@ -129,19 +137,18 @@ class TrafficSignClassifierNet(object):
         correct_prediction = tf.equal(tf.argmax(self.logits, 1), tf.argmax(one_hot_y, 1))
         accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-        sess  = tf.Session()
-
-        saver = tf.train.Saver()
         start_time = time.clock()
 
         print("Start training...")
+
+        saver = tf.train.Saver()
 
         try:
             saver.restore(sess, self.save_loc)
             print("Restored Model Successfully.")
         except Exception as e:
             print("No model found...Start building a new one")
-            sess.run(tf.global_variables_initializer())
+            self.sess.run(tf.global_variables_initializer())
 
         for x in range(self.epochs):
             num_iter = int(len(X_train)/self.batch_size)
@@ -149,11 +156,11 @@ class TrafficSignClassifierNet(object):
                 X_batch = X_train[i*self.batch_size:(i+1)*self.batch_size]
                 y_batch = y_train[i*self.batch_size:(i+1)*self.batch_size]
 
-                sess.run(optimizer, feed_dict={
+                self.sess.run(optimizer, feed_dict={
                     self.features: X_batch,
                     self.labels: y_batch,
                     self.kb: self.keep_prob,
-                    selflearning_rate: self.learn_rate})
+                    self.learning_rate: self.learn_rate})
 
             val_accuracy    = []
             validation_iter = int(len(X_val)/self.batch_size)
@@ -161,7 +168,7 @@ class TrafficSignClassifierNet(object):
                 X_val_batch = X_val[i*self.batch_size:(i+1)*self.batch_size]
                 y_val_batch = y_val[i*self.batch_size:(i+1)*self.batch_size]
                 val_accuracy.append(
-                    sess.run(accuracy_operation, feed_dict={
+                    self.sess.run(accuracy_operation, feed_dict={
                         self.features:X_val_batch,
                         self.labels: y_val_batch,
                         self.kp: 1}))
@@ -169,7 +176,7 @@ class TrafficSignClassifierNet(object):
             print("Epoch: {}    Validation accuracy:{:.3f}".format(x, np.mean(np.array(val_accuracy))))
 
 
-        saver.save(sess, self.save_loc)
+        saver.save(self.sess, self.save_loc)
         print("Train Model saved")
 
         # Calculate runtime and print out results
