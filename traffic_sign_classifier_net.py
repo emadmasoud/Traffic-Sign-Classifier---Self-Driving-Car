@@ -92,8 +92,6 @@ class TrafficSignClassifierNet(object):
         self.logits = tf.matmul(fc2, fc3_W) + fc3_b
 
     def accuracy_score(self, X_test, y_test, file_path):
-        # self.sess.run(tf.global_variables_initializer())
-        # tf.train.Saver().restore(sess, "model-convnet-tsc.chkpt.meta")
 
         loader = tf.train.import_meta_graph(file_path)
         loader.restore(self.sess, tf.train.latest_checkpoint('./'))
@@ -112,7 +110,7 @@ class TrafficSignClassifierNet(object):
         for i in range(test_iter):
             X_test_batch = X_test[i*self.batch_size:(i+1)*self.batch_size]
             y_test_batch = y_test[i*self.batch_size:(i+1)*self.batch_size]
-            test_accuracy = sess.run(accuracy_operation, feed_dict={
+            test_accuracy = self.sess.run(accuracy_operation, feed_dict={
                 self.features: X_test_batch,
                 self.labels: y_test_batch,
                 self.kp: 1.0,
@@ -137,18 +135,20 @@ class TrafficSignClassifierNet(object):
         correct_prediction = tf.equal(tf.argmax(self.logits, 1), tf.argmax(one_hot_y, 1))
         accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
+        self.sess.run(tf.global_variables_initializer())
+        
+        saver = tf.train.Saver() 
+
         start_time = time.clock()
 
         print("Start training...")
 
-        saver = tf.train.Saver()
-
         try:
-            saver.restore(sess, self.save_loc)
+            loader = tf.train.import_meta_graph("model-convnet-tsc.chkpt.meta")
+            loader.restore(self.sess, tf.train.latest_checkpoint('./'))
             print("Restored Model Successfully.")
         except Exception as e:
             print("No model found...Start building a new one")
-            self.sess.run(tf.global_variables_initializer())
 
         for x in range(self.epochs):
             num_iter = int(len(X_train)/self.batch_size)
@@ -159,7 +159,7 @@ class TrafficSignClassifierNet(object):
                 self.sess.run(optimizer, feed_dict={
                     self.features: X_batch,
                     self.labels: y_batch,
-                    self.kb: self.keep_prob,
+                    self.kp: self.keep_prob,
                     self.learning_rate: self.learn_rate})
 
             val_accuracy    = []
