@@ -136,8 +136,8 @@ class TrafficSignClassifierNet(object):
         accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         self.sess.run(tf.global_variables_initializer())
-        
-        saver = tf.train.Saver() 
+
+        saver = tf.train.Saver()
 
         start_time = time.clock()
 
@@ -184,3 +184,38 @@ class TrafficSignClassifierNet(object):
         m, s = divmod(train_time, 60)
         h, m = divmod(m, 60)
         print("Optimization Finished!! Training time: %02dh:%02dm:%02ds"% (h, m, s))
+
+    def predict(self, img, saved_model='model-convnet-tsc.chkpt.meta'):
+        """
+        Predict input
+        :param img:
+        :param  saved_model:
+        :return: labels array
+        """
+
+        try:
+            loader = tf.train.import_meta_graph(saved_model)
+            loader.restore(self.sess, tf.train.latest_checkpoint('./'))
+            print("Restored Model Successfully.")
+        except Exception as e:
+            print("No model found...Start building a new one")
+
+        result = None
+
+        if len(img) > 5000:
+            for offset in range(0, len(img), self.batch_size):
+                end = offset + self.batch_size
+                batch_x = img[offset:end]
+                predictions = session.run(model, feed_dict={self.features: batch_x})
+                if result is None:
+                    result = predictions
+                else:
+                    result = np.concatenate((result, predictions))
+        else:
+            predictions = session.run(model, feed_dict={self.features: img})
+            if result is None:
+                result = predictions
+            else:
+                result = np.concatenate((result, predictions))
+
+        return result
